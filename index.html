@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARES-IV // Gale Crater &amp; Mount Sharp EVA Traverse Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="css/styles.css" />
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+<div id="app-shell">
+  <!-- Top Mission Command Bar -->
+  <header class="top-bar">
+    <div class="brand-cluster">
+      <button class="menu-burger-btn" id="btn-toggle-trek-menu" title="Toggle NASA Mars Trek Tools Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="mission-emblem" aria-hidden="true">
+        <span class="planet-core"></span>
+        <span class="orbit-ring"></span>
+      </div>
+      <div>
+        <div class="mission-kicker">JPL / ARES-IV SURFACE OPERATIONS • GALE CRATER</div>
+        <h1 class="mission-title">AEOLIS MONS (MOUNT SHARP) EVA PLANNER</h1>
+      </div>
+    </div>
+
+
+
+
+    <!-- Live NASA MSL Telemetry Strip -->
+    <div class="telemetry-strip" id="nasa-telemetry">
+      <div class="telemetry-pill status-pill">
+        <span class="pulse-amber" id="telemetry-dot"></span>
+        <span id="telemetry-status">SYNCING NASA MSL...</span>
+      </div>
+      <div class="telemetry-pill">
+        <span class="t-label">SOL</span>
+        <span class="t-val" id="tel-sol">4995</span>
+      </div>
+      <div class="telemetry-pill">
+        <span class="t-label">AIR TEMP</span>
+        <span class="t-val" id="tel-temp">-71°C / -5°C</span>
+      </div>
+      <div class="telemetry-pill">
+        <span class="t-label">PRESSURE</span>
+        <span class="t-val" id="tel-pressure">777 Pa</span>
+      </div>
+      <div class="telemetry-pill">
+        <span class="t-label">SOLAR Ls</span>
+        <span class="t-val" id="tel-ls">341°</span>
+      </div>
+    </div>
+  </header>
+
+
+
+
+  <!-- Main Workspace -->
+  <main class="workspace">
+    <!-- Left Control Sidebar -->
+    <aside class="control-panel">
+      <!-- EVA Waypoint & Route Planner -->
+      <section class="panel-card">
+        <div class="card-header">
+          <h2>EVA TRAVERSE ROUTING</h2>
+          <span class="badge-amber" id="route-status-badge">MIN-DIST A*</span>
+        </div>
+
+
+
+
+        <p class="helper-text">
+          Click terrain to add waypoints. Pathfinder prioritizes <strong>shortest surface distance</strong> while avoiding steep elevation changes.
+        </p>
+
+
+
+
+        <!-- Multi-Point Waypoint Sequence Manager -->
+        <div class="waypoint-sequence-box">
+          <div class="wp-seq-header">
+            <span>WAYPOINTS (<span id="wp-count-label">2</span>)</span>
+            <div class="wp-action-group">
+              <button class="btn-mini" id="btn-undo-wp" title="Remove last waypoint">UNDO</button>
+              <button class="btn-mini btn-mini-danger" id="btn-clear-waypoints" title="Reset to single origin">RESET</button>
+            </div>
+          </div>
+          <div class="wp-list-container" id="waypoint-list-ui"></div>
+        </div>
+
+
+
+
+        <!-- Exploration Camera POV Mode -->
+        <div class="control-row">
+          <label><span>Camera Exploration Mode</span></label>
+          <div class="pov-btn-grid">
+            <button class="btn btn-secondary active-pov" id="btn-pov-free">FREE ORBIT</button>
+            <button class="btn btn-secondary" id="btn-pov-drone">DRONE RECON</button>
+            <button class="btn btn-secondary" id="btn-pov-astronaut">VISOR (2M)</button>
+          </div>
+        </div>
+
+
+
+
+        <!-- Mobility Profile & Hard Slope Limit -->
+        <div class="grid-2">
+          <div class="control-row">
+            <label for="mobility-selector"><span>Mobility System</span></label>
+            <select id="mobility-selector" class="select-box">
+              <option value="suit">Suited EVA (2.2 km/h)</option>
+              <option value="rover">Pressurized Rover (8.0 km/h)</option>
+              <option value="bot">Scout Microrover (1.2 km/h)</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label for="max-slope-slider">
+              <span>Max Grade</span>
+              <span class="mono-val" id="max-slope-val">18°</span>
+            </label>
+            <input type="range" id="max-slope-slider" min="8" max="28" step="1" value="18" />
+          </div>
+        </div>
+
+
+
+
+        <!-- Elevation Change Avoidance Weight -->
+        <div class="control-row">
+          <label for="slope-penalty-slider">
+            <span>Elevation Change Avoidance</span>
+            <span class="mono-val" id="slope-penalty-val">BALANCED (2.0x)</span>
+          </label>
+          <input
+            type="range"
+            id="slope-penalty-slider"
+            min="0.6"
+            max="4.0"
+            step="0.2"
+            value="2.0"
+          />
+        </div>
+
+
+
+
+        <!-- Action & Benchmark Preset Buttons -->
+        <div class="button-row">
+          <button class="btn btn-primary" id="btn-compute-route">COMPUTE EVA PATH</button>
+          <button class="btn btn-secondary" id="btn-preset-mount-sharp" title="Load Curiosity Mount Sharp Multi-Waypoint Ascent">
+            MT. SHARP REF
+          </button>
+        </div>
+
+
+
+
+        <!-- Route Metrics -->
+        <div class="metrics-grid" id="route-metrics">
+          <div class="metric-item">
+            <span class="m-label">SURFACE DIST</span>
+            <span class="m-val" id="metric-distance">0.00 km</span>
+          </div>
+          <div class="metric-item">
+            <span class="m-label">CLIMB / DROP</span>
+            <span class="m-val" id="metric-gain">+0 / -0 m</span>
+          </div>
+          <div class="metric-item">
+            <span class="m-label">MAX / AVG GRADE</span>
+            <span class="m-val" id="metric-slope">0.0° / 0.0°</span>
+          </div>
+          <div class="metric-item">
+            <span class="m-label">ROUND-TRIP EVA</span>
+            <span class="m-val" id="metric-time">00h 00m</span>
+          </div>
+        </div>
+
+
+
+
+        <!-- EVA Time & O2 Reserve Budget Bar -->
+        <div class="budget-box">
+          <div class="budget-header">
+            <span>EVA LIFE-SUPPORT BUDGET (<span id="budget-limit-label">8.0h</span> MAX)</span>
+            <span class="mono-val" id="budget-pct-label">100%</span>
+          </div>
+          <div class="status-bar-bg">
+            <div id="budget-bar" class="status-bar-fill"></div>
+          </div>
+        </div>
+
+
+
+
+        <!-- Hazard & Optimization Trade-Off Alerts -->
+        <div id="hazard-container"></div>
+
+
+
+
+        <!-- Elevation Profile Sparkline -->
+        <div class="profile-box">
+          <div class="profile-header">
+            <span>ELEVATION PROFILE (1:1 MOLA MATH)</span>
+            <span id="profile-grade-badge">OPTIMAL GRADE</span>
+          </div>
+          <canvas id="elevation-profile-canvas" width="300" height="82"></canvas>
+        </div>
+      </section>
+
+
+
+
+      <!-- Scientific Map Layers -->
+      <section class="panel-card">
+        <div class="card-header">
+          <h2>ORBITAL &amp; SURFACE LAYERS</h2>
+          <button class="btn-mini" id="btn-open-nasa-photos" title="Query NASA Image Archive">NASA PHOTOS</button>
+        </div>
+       <div class="control-row">
+ <label for="layer-surface"><span>Surface Analysis Layer (2D terrain + 3D globe)</span></label>
+ <select id="layer-surface" class="select-box">
+   <option value="none">Natural (or THEMIS toggle below)</option>
+   <option value="thermal">Thermal: surface temperature</option>
+   <option value="infrared">Infrared: 10 µm radiance</option>
+   <option value="chemical">Chemical: mineral units</option>
+ </select>
+</div>
+
+
+        <div class="layer-list">
+          <label class="layer-toggle">
+            <input type="checkbox" id="layer-themis" />
+            <span class="toggle-track"></span>
+            <div class="layer-info">
+              <span class="layer-name">THEMIS Thermal IR</span>
+              <span class="layer-desc">Nighttime thermal inertia &amp; bedrock heat retention</span>
+            </div>
+          </label>
+
+
+
+
+          <label class="layer-toggle">
+            <input type="checkbox" id="layer-rover-tracks" checked />
+            <span class="toggle-track"></span>
+            <div class="layer-info">
+              <span class="layer-name">Curiosity MSL Traverse</span>
+              <span class="layer-desc">Historical geological stations &amp; 2025 boxwork corridor</span>
+            </div>
+          </label>
+
+
+
+
+          <label class="layer-toggle">
+            <input type="checkbox" id="layer-solar-shadows" checked />
+            <span class="toggle-track"></span>
+            <div class="layer-info">
+              <span class="layer-name">Martian Solar Shadows</span>
+              <span class="layer-desc">Dynamic sun azimuth relief &amp; cold-trap shadows</span>
+            </div>
+          </label>
+
+
+
+
+          <label class="layer-toggle">
+            <input type="checkbox" id="layer-contours" checked />
+            <span class="toggle-track"></span>
+            <div class="layer-info">
+              <span class="layer-name">Topographic Contours</span>
+              <span class="layer-desc">50m MOLA elevation isolines across relief</span>
+            </div>
+          </label>
+        </div>
+
+
+
+
+        <!-- Solar Azimuth & Visual Terrain Exaggeration -->
+        <div class="control-row">
+          <label for="sun-angle-slider">
+            <span>Local Solar Time (Shadow Angle)</span>
+            <span class="mono-val" id="sun-time-val">15:18 LMST</span>
+          </label>
+          <input type="range" id="sun-angle-slider" min="6" max="18.5" step="0.1" value="15.3" />
+        </div>
+
+
+
+
+        <div class="control-row">
+          <label for="exaggeration-slider">
+            <span>3D Visual Relief Scale (Math 1:1)</span>
+            <span class="mono-val" id="exaggeration-val">1.4x</span>
+          </label>
+          <input type="range" id="exaggeration-slider" min="0.6" max="2.8" step="0.1" value="1.4" />
+        </div>
+      </section>
+    </aside>
+
+
+
+
+    <!-- 3D Viewport -->
+    <section class="viewport-wrapper" id="viewport-container">
+      <canvas id="mars-canvas"></canvas>
+      <div class="view-switch">
+       <button class="btn btn-secondary active-pov" id="btn-view-terrain">2D / TERRAIN</button>
+       <button class="btn btn-secondary" id="btn-view-globe">3D GLOBE</button>
+      </div>
+
+
+
+
+      <!-- Active POV Flight Telemetry Banner -->
+      <div class="pov-banner hidden" id="pov-banner">
+        <span id="pov-banner-text">VISOR POV ACTIVE</span>
+        <button class="btn-mini btn-mini-danger" id="btn-exit-pov">EXIT POV</button>
+      </div>
+
+
+
+
+      <!-- NASA Mars Trek Style Menu Drawer -->
+      <div class="trek-menu-drawer hidden" id="trek-menu-drawer">
+        <div class="trek-menu-header">
+          <div class="trek-nasa-badge">
+            <span class="trek-nasa-text">NASA</span>
+          </div>
+          <span class="trek-menu-title">Mars Trek</span>
+          <button class="trek-close-btn" id="btn-close-trek-menu">×</button>
+        </div>
+        <div class="trek-menu-body">
+          <div class="trek-section-label">Analysis &amp; Recon Tools</div>
+          <ul class="trek-menu-list">
+            <li id="menu-item-distance">Direct vs. A* Route Comparison</li>
+            <li id="menu-item-elevation">Calculate Elevation Profile</li>
+            <li id="menu-item-sunangle">Calculate Sun Angle &amp; Shadows</li>
+            <li id="menu-item-nasa-gallery">Query NASA Gale Crater Photo Archive</li>
+            <li id="menu-item-3dprint">Download 3D Print Mesh (.STL)</li>
+            <li id="menu-item-countrymover">Country Mover Scale Comparator</li>
+            <li id="menu-item-selftest">Run Engineering Self-Test Suite</li>
+          </ul>
+
+
+
+
+          <div class="trek-section-label">Export &amp; Share</div>
+          <ul class="trek-menu-list">
+            <li id="menu-item-export-json">Export Mission Plan (.JSON)</li>
+            <li id="menu-item-share">Share Mission Link</li>
+            <li id="menu-item-capture">Screen Capture (.PNG)</li>
+          </ul>
+
+
+
+
+          <div class="trek-section-label">Mission Information</div>
+          <ul class="trek-menu-list">
+            <li id="menu-item-credits">Credits &amp; NASA Data Sources</li>
+          </ul>
+        </div>
+      </div>
+
+
+
+
+      <!-- Custom Centered Dialog Modal -->
+      <div class="custom-dialog-backdrop hidden" id="custom-dialog-backdrop">
+        <div class="custom-dialog-card" id="custom-dialog-card">
+          <div class="dialog-header">
+            <h3 id="dialog-title">MISSION RESOURCE DATA</h3>
+            <button class="dialog-close-btn" id="btn-close-dialog">×</button>
+          </div>
+          <div class="dialog-body" id="dialog-body-content"></div>
+        </div>
+      </div>
+
+
+
+
+      <!-- Fusion 360 Style ViewCube HUD (Top Right) -->
+      <div class="viewcube-hud" id="viewcube-hud" title="Drag to orbit or click any face, edge, or corner">
+        <button class="vc-home-btn" id="vc-home-btn" title="Reset Home Isometric View">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10.5L12 3l9 7.5" />
+            <path d="M5 9.5V20h14V9.5" />
+          </svg>
+        </button>
+
+
+
+
+        <div class="vc-scene">
+          <div class="vc-cube" id="vc-cube">
+            <div class="vc-face vc-front" data-view="FRONT">FRONT</div>
+            <div class="vc-face vc-back" data-view="BACK">BACK</div>
+            <div class="vc-face vc-right" data-view="RIGHT">RIGHT</div>
+            <div class="vc-face vc-left" data-view="LEFT">LEFT</div>
+            <div class="vc-face vc-top" data-view="TOP">TOP</div>
+            <div class="vc-face vc-bottom" data-view="BOTTOM">BOTTOM</div>
+
+
+
+
+            <!-- 8 Interactive Corners -->
+            <div class="vc-hotspot vc-corner" data-view="TOP_FRONT_RIGHT" style="transform: translate3d(34px, -34px, 34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="TOP_FRONT_LEFT" style="transform: translate3d(-34px, -34px, 34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="TOP_BACK_RIGHT" style="transform: translate3d(34px, -34px, -34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="TOP_BACK_LEFT" style="transform: translate3d(-34px, -34px, -34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="BOTTOM_FRONT_RIGHT" style="transform: translate3d(34px, 34px, 34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="BOTTOM_FRONT_LEFT" style="transform: translate3d(-34px, 34px, 34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="BOTTOM_BACK_RIGHT" style="transform: translate3d(34px, 34px, -34px)"></div>
+            <div class="vc-hotspot vc-corner" data-view="BOTTOM_BACK_LEFT" style="transform: translate3d(-34px, 34px, -34px)"></div>
+
+
+
+
+            <!-- 12 Interactive Edges -->
+            <div class="vc-hotspot vc-edge-h" data-view="TOP_FRONT" style="transform: translate3d(0px, -34px, 34px)"></div>
+            <div class="vc-hotspot vc-edge-h" data-view="TOP_BACK" style="transform: translate3d(0px, -34px, -34px)"></div>
+            <div class="vc-hotspot vc-edge-h" data-view="BOTTOM_FRONT" style="transform: translate3d(0px, 34px, 34px)"></div>
+            <div class="vc-hotspot vc-edge-h" data-view="BOTTOM_BACK" style="transform: translate3d(0px, 34px, -34px)"></div>
+            <div class="vc-hotspot vc-edge-v" data-view="FRONT_RIGHT" style="transform: translate3d(34px, 0px, 34px)"></div>
+            <div class="vc-hotspot vc-edge-v" data-view="FRONT_LEFT" style="transform: translate3d(-34px, 0px, 34px)"></div>
+            <div class="vc-hotspot vc-edge-v" data-view="BACK_RIGHT" style="transform: translate3d(34px, 0px, -34px)"></div>
+            <div class="vc-hotspot vc-edge-v" data-view="BACK_LEFT" style="transform: translate3d(-34px, 0px, -34px)"></div>
+            <div class="vc-hotspot vc-edge-z" data-view="TOP_RIGHT" style="transform: translate3d(34px, -34px, 0px) rotateY(90deg)"></div>
+            <div class="vc-hotspot vc-edge-z" data-view="TOP_LEFT" style="transform: translate3d(-34px, -34px, 0px) rotateY(90deg)"></div>
+            <div class="vc-hotspot vc-edge-z" data-view="BOTTOM_RIGHT" style="transform: translate3d(34px, 34px, 0px) rotateY(90deg)"></div>
+            <div class="vc-hotspot vc-edge-z" data-view="BOTTOM_LEFT" style="transform: translate3d(-34px, 34px, 0px) rotateY(90deg)"></div>
+          </div>
+        </div>
+
+
+
+
+        <div class="vc-compass" id="vc-compass">
+          <span class="compass-n">N</span>
+          <span class="compass-e">E</span>
+          <span class="compass-s">S</span>
+          <span class="compass-w">W</span>
+        </div>
+        <div class="vc-readout" id="vc-orientation-label">ISO NE • TILT 38°</div>
+      </div>
+
+
+
+
+      <!-- Geological Legend Overlay (Bottom Left) -->
+      <div class="map-legend" id="map-legend">
+        <div class="legend-title" id="legend-title">AEOLIS MONS (MOUNT SHARP) STRATIGRAPHY</div>
+        <div class="legend-items" id="legend-items">
+          <div class="legend-row"><span class="swatch" style="background:#f59e42"></span>Min-Distance Low-Grade EVA Corridor</div>
+          <div class="legend-row"><span class="swatch dashed"></span>Curiosity MSL Traverse Reference</div>
+          <div class="legend-row"><span class="swatch" style="background:#8c4423"></span>Murray Formation / Vera Rubin Ridge</div>
+          <div class="legend-row"><span class="swatch" style="background:#ebb178"></span>Sulfate-Bearing Unit (Upper Slope)</div>
+        </div>
+      </div>
+
+
+
+
+      <!-- Bottom Cursor Coordinate & Slope Readout -->
+      <div class="cursor-hud">
+        <span>LAT/LON: <strong id="hud-latlon">-4.6421°, 137.4612°</strong></span>
+        <span>MOLA ELEV: <strong id="hud-elev">-4,218 m</strong></span>
+        <span>LOCAL SLOPE: <strong id="hud-slope">6.8°</strong></span>
+        <span class="hud-hint">LMB: Add Waypoint • Drag: Orbit • RMB: Pan</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+
+
+
+<script src="js/config.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/routing.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
+
+
+
+
+
