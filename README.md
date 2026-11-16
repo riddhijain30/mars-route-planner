@@ -4,6 +4,8 @@
 [![NASA Data](https://img.shields.io/badge/Data-NASA%20PDS%20%2F%20Mars%20Trek-blue)](https://trek.nasa.gov/)
 [![Three.js](https://img.shields.io/badge/3D%20Engine-Three.js-orange)](https://threejs.org/)
 [![Status](https://img.shields.io/badge/Status-Operational-success)](index.html)
+Version 9 Demo- https://drive.google.com/file/d/1WfPiErPLrX0Q0zYQuEXxssgXwMeuJJnr/view?usp=sharing
+Version 8 Demo- https://drive.google.com/drive/folders/1dk66yGhtr-PM37IhiiqY3AtL0nOgoJjj
 
 A high-fidelity, interactive web application designed for EVA (Extravehicular Activity) route planning, terrain traversal analysis, and multi-scale orbital data visualization across Gale Crater and the boxwork sulfate formations of Aeolis Mons (Mount Sharp) on Mars.
 
